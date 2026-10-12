@@ -170,16 +170,23 @@
 
   /* ----------------------------------------------------------------------
      6. 先行登録フォーム
-     バックエンドが無いので、入力内容を検証したうえで mailto: を組み立てる。
+     バックエンドが無いので、入力内容を検証したうえで送信先を開く。
      本番ではこの submit ハンドラを fetch() に差し替えるだけでよい。
      ---------------------------------------------------------------------- */
   var form   = $('#signupForm');
   var email  = $('#email');
   var status = $('#formStatus');
 
-  // 送信先。実際に運用するときはここを差し替える。
-  // ※ 公開前に、このアドレスが実在し受信できることを必ず確認すること。
-  var CONTACT_EMAIL = 'contact@reveriel.com';
+  // 送信先メールアドレス。
+  // 運営者の方針により、メールアドレスは原則として公開せず、
+  // 「請求があった場合に遅滞なく開示する」扱いとしている。
+  // そのためここは空のままにし、未設定のときは FEEDBACK_FORM_URL を開く。
+  // 実在して受信できることを確認できたアドレスがある場合のみ、ここに代入する
+  // （代入すると mailto: を組み立てる従来の動作に切り替わる）。
+  var CONTACT_EMAIL = '';
+
+  // お問い合わせ・ご登録の受け口（マトリクス共通のフィードバックフォーム）
+  var FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfHGUfgAlViT3TFiVtJi_EpJ4ioUpd9oGyaJ7rehEV-gBH_PA/viewform?usp=pp_url&entry.1745177199=%E3%83%A9%E3%82%AF%E8%AB%8B%E6%B1%82';
 
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -227,12 +234,28 @@
         'このメールはラク請求のランディングページから送信されました。'
       ];
 
+      // 送信先アドレスが未設定（＝非公開の方針）のときは、
+      // フィードバックフォームを開き、「連絡先（任意）」欄への記入を案内する。
+      // ポップアップがブロックされた場合に備えて、本文中にもリンクを残す。
+      if (!CONTACT_EMAIL) {
+        setStatus('ありがとうございます。確認のため、開いたフォームの「連絡先（任意）」欄に ' +
+                  'ご登録のメールアドレスをご記入ください。', 'is-success');
+
+        window.open(FEEDBACK_FORM_URL, '_blank', 'noopener');
+
+        if (status) {
+          status.insertAdjacentHTML('beforeend',
+            '<br><a href="' + FEEDBACK_FORM_URL + '" target="_blank" rel="noopener">' +
+            'フォームが開かない場合はこちらをクリック</a>');
+        }
+        return;
+      }
+
       var mailto = 'mailto:' + CONTACT_EMAIL +
                    '?subject=' + encodeURIComponent(subject) +
                    '&body='    + encodeURIComponent(bodyLines.join('\n'));
 
-      setStatus('ありがとうございます。メールソフトを開きます。送信が難しい場合は ' +
-                CONTACT_EMAIL + ' までご連絡ください。', 'is-success');
+      setStatus('ありがとうございます。メールソフトを開きます。', 'is-success');
 
       // メールソフトが起動しない環境でも登録内容が失われないよう、リンクも残す
       window.location.href = mailto;
